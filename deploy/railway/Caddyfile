@@ -1,0 +1,94 @@
+# Serves both websites from one Railway service and forwards /api to the API service.
+#
+#   APP_HOST       the dashboard's domain, e.g. app.stryx.xyz (every other host gets the landing page)
+#   API_UPSTREAM   the API over Railway's private network, e.g. api.railway.internal:3000
+#   PORT           set by Railway
+#
+# Railway's edge terminates HTTPS and forwards plain HTTP here, so Caddy does no TLS itself.
+{
+	admin off
+	auto_https off
+}
+
+# Railway's edge sends a variable number of internal hops in X-Forwarded-For, so counting hops landed on
+# a Railway address that changed per request and the per-visitor limits never added up. Its X-Real-IP
+# is always overwritten with the connecting address (a client cannot set it), so the API is sent exactly
+# "visitor, this proxy's peer" and takes the visitor with TRUST_PROXY=2. Without X-Real-IP (a local
+# run) the peer stands in for the visitor.
+(client_ip) {
+	header_up X-Forwarded-For "{visitor}, {http.request.remote.host}"
+	header_up -X-Real-IP
+	header_up -Forwarded
+}
+
+:{$PORT:8080} {
+	encode zstd gzip
+
+	map {http.request.header.X-Real-IP} {visitor} {
+		"" {http.request.remote.host}
+		default {http.request.header.X-Real-IP}
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Strict-Transport-Security "max-age=31536000"
+		# Never framed: the dashboard holds the controls for real funds.
+		Content-Security-Policy "frame-ancestors 'none'"
+		X-Frame-Options DENY
+		-Server
+	}
+
+	@app host {$APP_HOST}
+	handle @app {
+		# The whole API, on the dashboard's own origin: the session cookie is pinned to this host
+		# (__Host- prefix), and the API sends no CORS headers, so it must be same-origin.
+		handle_path /api/* {
+			reverse_proxy {$API_UPSTREAM} {
+				import client_ip
+			}
+		}
+
+		# Everything else is the dashboard. In its own handle block: Caddy runs try_files before
+		# handle_path, so outside one, every /api call would be rewritten to index.html.
+		handle {
+			root * /srv/app
+			# Hashed build files never change: cache them for a year. Everything else is the page itself
+			# (index.html under any route, since a deep link like /wallets is served it too) and is never
+			# cached, so a deploy reaches everyone on their next page load. Matched on the requested path,
+			# which header sees before try_files rewrites it.
+			@assets path /assets/*
+			header @assets Cache-Control "public, max-age=31536000, immutable"
+			@page not path /assets/*
+			header @page Cache-Control "no-cache"
+			# A single-page app: any path that is not a file is a dashboard route.
+			try_files {path} /index.html
+			file_server
+		}
+	}
+
+	handle {
+		# The landing page needs only two API routes: the live-drops strip and the waitlist form.
+		# Nothing else is reachable from this host.
+		@landingApi path /api/home/drops /api/waitlist
+		handle @landingApi {
+			uri strip_prefix /api
+			reverse_proxy {$API_UPSTREAM} {
+				import client_ip
+			}
+		}
+		handle /api/* {
+			respond 404
+		}
+
+		handle {
+			root * /srv/site
+			@assets path /assets/*
+			header @assets Cache-Control "public, max-age=31536000, immutable"
+			@page not path /assets/*
+			header @page Cache-Control "no-cache"
+			try_files {path} {path}.html {path}/index.html
+			file_server
+		}
+	}
+}

@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: stryx-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: stryx
+      POSTGRES_PASSWORD: stryx_dev_only
+      POSTGRES_DB: stryx
+    ports:
+      - '5432:5432'
+    volumes:
+      - stryx-postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: stryx-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - stryx-redis-data:/data
+
+volumes:
+  stryx-postgres-data:
+  stryx-redis-data:

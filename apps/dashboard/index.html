@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- img-src only: everything else is unrestricted by this. 'self' covers our own
+         proxied collection images (see collection-resolve-controller.ts) and local assets,
+         https://*.seadn.io is OpenSea's image CDN (their collection images are hotlinked
+         directly, never proxied). -->
+    <meta http-equiv="Content-Security-Policy" content="img-src 'self' data: blob: https://*.seadn.io https://*.walletconnect.com https://*.walletconnect.org https://*.reown.com https://imagedelivery.net" />
+    <title>Stryx Console: your mint command center</title>
+    <meta name="description" content="Schedule drops, run every wallet, and mint first on every chain, all from one place." />
+    <!-- Link previews (chats, X, Discord). Absolute URLs: a crawler does not resolve relative ones.
+         The image is in the repo-root brand/ folder; change the domain here if the app moves. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Stryx" />
+    <meta property="og:url" content="https://app.gostryx.com/" />
+    <meta property="og:title" content="Stryx Console: your mint command center" />
+    <meta property="og:description" content="Schedule drops, run every wallet, and mint first on every chain, all from one place." />
+    <meta property="og:image" content="https://app.gostryx.com/brand/og-app.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Stryx Console: your mint command center" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#0E0F0A" />
+    <link rel="icon" type="image/svg+xml" href="/brand/favicon.svg" />
+    <!-- Shared brand tokens and logo animation. /brand is public/brand, a link to the repo-root brand/ folder. -->
+    <link rel="stylesheet" href="/brand/brand.css" />
+    <!-- Classic script, not a module: it must run before first paint to set data-theme. -->
+    <script src="/brand/theme.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,37 @@
+{
+  "name": "@stryx/key-management",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Envelope encryption + KeyManagementProvider abstraction for wallet private key custody (ADR-001).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.6.0",
+    "vitest": "^4.1.11"
+  },
+  "peerDependencies": {
+    "@aws-sdk/client-kms": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@aws-sdk/client-kms": {
+      "optional": true
+    }
+  }
+}

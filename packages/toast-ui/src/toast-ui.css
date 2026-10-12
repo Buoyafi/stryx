@@ -1,0 +1,230 @@
+/* Shared pill toast notifications. Every colour reads a --stryx-* token from
+   brand/brand.css: nothing here hardcodes one. */
+
+.toast-host {
+  position: fixed;
+  z-index: 2000;
+  left: 50%;
+  right: auto;
+  bottom: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0 max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  pointer-events: none; /* the gaps between pills never block clicks on the page beneath */
+  max-width: 100vw;
+}
+
+@media (min-width: 640px) {
+  .toast-host {
+    left: auto;
+    right: 0;
+    bottom: 0;
+    transform: none;
+    align-items: flex-end;
+    padding: 0 max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) 1rem;
+  }
+}
+
+.toast-pill {
+  pointer-events: auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  height: 36px;
+  max-width: min(360px, calc(100vw - 2rem));
+  padding: 4px 12px 4px 4px;
+  border-radius: 9999px;
+  background: var(--stryx-card);
+  border: 1px solid var(--stryx-line);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--stryx-ink) 16%, transparent);
+  animation: toast-in 0.22s ease both;
+}
+
+.toast-pill.is-exiting {
+  animation: toast-out 0.16s ease both;
+}
+
+/* ---------- Dismiss button, at the front ---------- */
+
+.toast-dismiss {
+  position: relative;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--stryx-bg);
+  border: none;
+  color: var(--stryx-sub);
+  padding: 0;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+}
+
+/* Enlarges the tap target to >=32px without growing the visible 20px circle. */
+.toast-dismiss::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
+.toast-dismiss:hover,
+.toast-dismiss:focus-visible {
+  color: var(--stryx-ink);
+}
+
+.toast-dismiss:focus-visible {
+  outline: 2px solid var(--stryx-accent);
+  outline-offset: 2px;
+}
+
+/* ---------- Status dot ---------- */
+
+.toast-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--stryx-sub);
+}
+
+.toast-pill[data-tone='error'] .toast-dot {
+  background: var(--stryx-fail);
+}
+
+.toast-pill[data-tone='success'] .toast-dot {
+  background: var(--stryx-accent);
+}
+
+.toast-pill[data-tone='info'] .toast-dot {
+  background: var(--stryx-pending);
+}
+
+/* ---------- Message ---------- */
+
+.toast-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--stryx-ink);
+}
+
+.toast-text strong {
+  flex: none;
+  font-weight: 700;
+}
+
+.toast-text span {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--stryx-sub);
+}
+
+/* ---------- Action button (errors only, one per toast) ---------- */
+
+.toast-action {
+  flex: none;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--stryx-accent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.toast-action:focus-visible {
+  outline: 2px solid var(--stryx-accent);
+  outline-offset: 2px;
+}
+
+/* ---------- Progress line ---------- */
+
+/* A separate clipping layer, sized and rounded exactly like the pill, so the flat progress bar
+   never pokes past the pill's stadium-shaped (fully rounded) ends. */
+.toast-progress-clip {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.toast-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  transform-origin: left;
+  /* Follows the theme automatically: violet in light mode, electric lime in dark. */
+  background: var(--stryx-accent);
+  opacity: 0.8;
+  animation-name: toast-shrink;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+.toast-pill:hover .toast-progress,
+.toast-pill:focus-within .toast-progress {
+  animation-play-state: paused;
+}
+
+@keyframes toast-shrink {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(12px) scale(0.92);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-pill {
+    animation: none;
+  }
+  .toast-progress {
+    animation: none;
+    transform: scaleX(0);
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "@stryx/utils",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared pure-function utilities with no business logic.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./private-key": {
+      "types": "./dist/private-key.d.ts",
+      "default": "./dist/private-key.js"
+    },
+    "./redact-urls": {
+      "types": "./dist/redact-urls.d.ts",
+      "default": "./dist/redact-urls.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.6.0",
+    "vitest": "^4.1.11"
+  }
+}

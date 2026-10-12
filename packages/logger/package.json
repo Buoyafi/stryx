@@ -1,0 +1,21 @@
+{
+  "name": "@stryx/logger",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Structured logger: timestamp, service, level, request ID, correlation ID. Never logs secrets or key material.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": { "pino": "^9.5.0" },
+  "devDependencies": {
+    "pino-pretty": "^13.0.0",
+    "@types/node": "^22.10.0",
+    "typescript": "^5.6.0",
+    "vitest": "^4.1.11"
+  }
+}

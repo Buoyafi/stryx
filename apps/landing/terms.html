@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title><!--LEGAL_TITLE--> | Stryx</title>
+    <!--LEGAL_ROBOTS-->
+    <link rel="icon" href="/brand/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/brand/brand.css" />
+    <link rel="stylesheet" href="./src/styles.css" />
+    <script src="/brand/theme.js"></script>
+  </head>
+  <body class="legal-page">
+    <header class="legal-header">
+      <a class="legal-back" href="/">← Stryx</a>
+      <button type="button" class="theme-toggle" onclick="toggleStryxTheme()" aria-label="Toggle dark and light mode">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" /></svg>
+      </button>
+    </header>
+    <main class="legal" id="main">
+      <h1><!--LEGAL_TITLE--></h1>
+      <!--LEGAL_BODY-->
+    </main>
+    <footer class="legal-footer">
+      <a href="/terms.html">Terms of Use</a>
+      <a href="/privacy.html">Privacy Policy</a>
+      <a href="/">Stryx</a>
+    </footer>
+    <script type="module" src="./src/legal.js"></script>
+  </body>
+</html>

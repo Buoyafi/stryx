@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Stryx">
+  <!-- Standalone: a browser tab has no page CSS, so nothing here uses currentColor or a theme token. The dark tile keeps the white rings readable on light and dark tabs alike. -->
+  <rect width="64" height="64" rx="15" fill="#0E0F0A"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="3.4">
+    <ellipse cx="32" cy="32" rx="11" ry="25"/>
+    <ellipse cx="32" cy="32" rx="11" ry="25" transform="rotate(60 32 32)"/>
+    <ellipse cx="32" cy="32" rx="11" ry="25" transform="rotate(-60 32 32)"/>
+  </g>
+  <circle cx="32" cy="32" r="12" fill="#0E0F0A"/>
+  <g transform="translate(32 32) scale(0.5) translate(-32 -32)">
+    <path d="M44 8 H22 L15 31 H33 L20 57 L50 25 H31 Z" fill="#CCFF00" stroke="#CCFF00" stroke-width="3" stroke-linejoin="round"/>
+  </g>
+</svg>

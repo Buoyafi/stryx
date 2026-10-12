@@ -1,0 +1,262 @@
+/* Shared chain icon and chain tooltip. */
+
+/* ---------- Icon ---------- */
+
+.chain-icon {
+  --chain-icon-size: 56px;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  box-sizing: border-box;
+  width: var(--chain-icon-size);
+  height: var(--chain-icon-size);
+  margin: 0;
+  padding: 0;
+  /* A rounded square, not a circle: the corner scales with the icon, so the 24px and 56px
+     sizes keep the same shape. The testnet badge and live dot below stay round. */
+  border-radius: calc(var(--chain-icon-size) * 0.28);
+  background: var(--stryx-card);
+  border: 1px solid var(--stryx-line);
+  color: var(--stryx-ink);
+  font: inherit;
+  cursor: default;
+  transition: border-color 0.15s ease;
+}
+
+.chain-icon:focus-visible {
+  border-color: var(--stryx-accent);
+}
+
+/* Hover only where there is a real hover: on a touch screen a tap would leave the accent border stuck on. */
+@media (hover: hover) {
+  .chain-icon:hover {
+    border-color: var(--stryx-accent);
+  }
+}
+
+.chain-icon--sm {
+  --chain-icon-size: 24px;
+}
+
+.chain-icon--sm .chain-icon__img {
+  width: 62%;
+  height: 62%;
+}
+
+.chain-icon__img {
+  display: block;
+  width: 54%;
+  height: 54%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* Fallback for a chain with no icon file: first two letters in the plain tile. */
+.chain-icon__fallback {
+  font-size: calc(var(--chain-icon-size) * 0.3);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* "T" on testnets. Text, not just colour. */
+.chain-icon__badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: var(--stryx-card);
+  border: 1px solid var(--stryx-line);
+  color: var(--stryx-ink);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.chain-icon--sm .chain-icon__badge {
+  top: -5px;
+  right: -6px;
+  min-width: 13px;
+  height: 13px;
+  font-size: 8px;
+  line-height: 11px;
+}
+
+.chain-icon__dot {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: var(--stryx-sub);
+  border: 2px solid var(--stryx-bg);
+  pointer-events: none;
+}
+
+.chain-icon__dot--live {
+  background: var(--stryx-accent);
+  animation: chain-icon-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes chain-icon-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--stryx-accent) 50%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 5px transparent;
+  }
+}
+
+/* ---------- Tooltip ---------- */
+
+/* One element in <body>, position: fixed, so no container's overflow can clip it. */
+.chain-tip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  box-sizing: border-box;
+  max-width: 240px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--stryx-card);
+  color: var(--stryx-ink);
+  border: 1px solid var(--stryx-line);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--stryx-ink) 16%, transparent);
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+}
+
+.chain-tip[hidden] {
+  display: none;
+}
+
+.chain-tip[data-placement='bottom'] {
+  transform: translateY(-4px);
+}
+
+.chain-tip.is-open {
+  opacity: 1;
+  transform: none;
+}
+
+/* Pointer arrow, aimed at the icon by --chain-tip-arrow-x. */
+.chain-tip::after {
+  content: '';
+  position: absolute;
+  left: var(--chain-tip-arrow-x, 50%);
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  background: var(--stryx-card);
+  border: 1px solid var(--stryx-line);
+  transform: rotate(45deg);
+}
+
+.chain-tip[data-placement='top']::after {
+  bottom: -5px;
+  border-top: 0;
+  border-left: 0;
+}
+
+.chain-tip[data-placement='bottom']::after {
+  top: -5px;
+  border-bottom: 0;
+  border-right: 0;
+}
+
+.chain-tip__title {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chain-tip__rows {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+.chain-tip__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.chain-tip__row dt {
+  color: var(--stryx-sub);
+}
+
+.chain-tip__row dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Status rows carry a glyph as well as a colour. */
+.chain-tip__value--ok::before {
+  content: '✓ ';
+}
+
+.chain-tip__value--fail::before {
+  content: '✕ ';
+}
+
+.chain-tip__value--ok {
+  color: var(--stryx-accent);
+}
+
+.chain-tip__value--fail {
+  color: var(--stryx-fail);
+}
+
+/* Small accent and fail text is below AA on the light theme, so there it is ink
+   with a coloured underline (see brand/BRAND.md). */
+:root:not([data-theme='dark']) .chain-tip__value--ok,
+:root:not([data-theme='dark']) .chain-tip__value--fail {
+  color: var(--stryx-ink);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+:root:not([data-theme='dark']) .chain-tip__value--ok {
+  text-decoration-color: var(--stryx-accent);
+}
+
+:root:not([data-theme='dark']) .chain-tip__value--fail {
+  text-decoration-color: var(--stryx-fail);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chain-tip {
+    transition: none;
+    transform: none;
+  }
+  .chain-tip[data-placement='bottom'] {
+    transform: none;
+  }
+  .chain-icon__dot--live {
+    animation: none;
+  }
+  .chain-icon {
+    transition: none;
+  }
+}

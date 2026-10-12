@@ -1,0 +1,66 @@
+# --- Dependencies & build output ---
+node_modules/
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+.turbo/
+coverage/
+*:Zone.Identifier
+
+# --- Environment & secrets ---
+# Never commit real env files or credential material. This project handles
+# wallet private keys and KMS credentials: treat this section as load-bearing,
+# not boilerplate. See docs/adr/ADR-001-wallet-key-custody-and-emergency-stop.md.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+service-account*.json
+secrets/
+*.secret
+
+# --- Local Redis snapshots ---
+# redis-server writes dump.rdb (and appendonly files) into whatever folder it was started from.
+*.rdb
+appendonly*.aof
+appendonlydir/
+
+# --- Logs ---
+*.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+
+# --- OS noise ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --- Editor / IDE ---
+# .vscode is intentionally NOT ignored: settings.json, extensions.json, and
+# launch.json are shared team config and should be committed. Only ignore
+# other editors' local state so this repo stays editor-agnostic for everyone else.
+.idea/
+*.swp
+*.swo
+
+# --- Package manager ---
+package-lock.json.bak
+
+# --- Local tooling installers (not part of the app) ---
+/aws/
+/awscliv2.zip
+
+# --- Deployment (once relevant) ---
+.vercel
+
+# --- Prisma (once packages/database is implemented) ---
+# Uncomment if a custom generator output path is ever configured outside node_modules:
+# packages/database/generated/

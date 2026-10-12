@@ -1,0 +1,28 @@
+{
+  "name": "@stryx/chains",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Central chain registry: identity, network kind, gas token and icon for every chain Stryx knows about. Pure data, no Node or browser APIs.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./icons/*": "./icons/*"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "sync-icons": "node scripts/sync-icons.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.6.0",
+    "vitest": "^4.1.11"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "StryxApiKekEncryptDecryptOnly",
+      "Effect": "Allow",
+      "Action": ["kms:Encrypt", "kms:Decrypt"],
+      "Resource": "REPLACE_WITH_THE_KEK_ARN"
+    }
+  ]
+}

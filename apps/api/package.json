@@ -1,0 +1,52 @@
+{
+  "name": "@stryx/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Fastify API gateway \u2014 Phase 1 modular-monolith host composing all services/* in-process.",
+  "type": "module",
+  "main": "./dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "migrate:kms-provider": "tsx scripts/migrate-wallet-kms-provider.ts",
+    "signed-mint:report": "tsx scripts/signed-mint-report.ts",
+    "chains:doctor": "tsx scripts/chain-doctor.ts",
+    "operator:adopt": "tsx scripts/operator.ts adopt",
+    "operator:grant": "tsx scripts/operator.ts grant",
+    "operator:revoke": "tsx scripts/operator.ts revoke",
+    "operator:list": "tsx scripts/operator.ts list",
+    "operator:uncap": "tsx scripts/operator.ts uncap",
+    "operator:cap": "tsx scripts/operator.ts cap"
+  },
+  "dependencies": {
+    "@aws-sdk/client-kms": "^3.700.0",
+    "@stryx/chains": "*",
+    "@stryx/config": "*",
+    "@stryx/database": "*",
+    "@stryx/eligibility": "*",
+    "@stryx/event-bus": "*",
+    "@stryx/key-management": "*",
+    "@stryx/logger": "*",
+    "@stryx/nft-engine": "*",
+    "@stryx/nonce-manager": "*",
+    "@stryx/transaction-engine": "*",
+    "@stryx/user-service": "*",
+    "@stryx/utils": "*",
+    "@stryx/wallet-service": "*",
+    "bullmq": "^5.34.0",
+    "dotenv": "^16.4.5",
+    "fastify": "^5.1.0",
+    "ioredis": "^5.4.0",
+    "viem": "^2.21.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^4.1.11"
+  }
+}

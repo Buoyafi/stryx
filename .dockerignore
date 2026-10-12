@@ -1,0 +1,11 @@
+# Keeps the Docker build context small and free of secrets (deploy/railway/*.Dockerfile).
+**/node_modules
+**/dist
+**/coverage
+**/*.tsbuildinfo
+.git
+.env
+.env.*
+!.env.example
+*.rdb
+*.log

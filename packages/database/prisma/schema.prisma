@@ -1,0 +1,461 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WalletTier {
+  TREASURY
+  HOT
+  MINT
+}
+
+enum WalletStatus {
+  ACTIVE
+  ARCHIVED
+  COMPROMISED
+}
+
+/// How Stryx came to hold a wallet's key: an axis independent of `tier`
+/// (purpose). GENERATED: Stryx created the keypair, so it holds the ONLY
+/// copy; losing it loses the funds. IMPORTED: the key was supplied by the
+/// user, who presumably still holds the original.
+enum WalletOrigin {
+  GENERATED
+  IMPORTED
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+/// ADR-002 §3.2. Every wallet has exactly one owning user, always: see
+/// ADR-002 §3.11 for how the pre-existing single-operator wallets get a
+/// reserved owner during migration instead of allowing a nullable/unowned
+/// state.
+model User {
+  id           String     @id @default(uuid())
+  /// ADR-002 password accounts only. Null for an account created by wallet sign-in (ADR-003 §4.4).
+  email        String?    @unique
+  passwordHash String?
+  role         UserRole   @default(USER)
+  status       UserStatus @default(ACTIVE)
+
+  /// ADR-002 §3.7. Null = use the platform default cap (see apps/api's
+  /// SpendCapResolver). Stored as a decimal string, like other wei amounts
+  /// in this codebase: wei routinely exceeds JS's safe-integer range.
+  dailySpendCapWei String?
+  /// false = unlimited, no cap tracked at all. Defaults true for every new
+  /// signup; the reserved operator row is backfilled to false (ADR-002
+  /// §3.7: "the operator's own account can be configured with... no cap
+  /// without special-casing 'the operator' in code": this column is that
+  /// mechanism, not a code-level special case).
+  spendCapEnabled Boolean @default(true)
+
+  /// Optional profile handles. Stored normalised (no leading @, Discord
+  /// lower-cased), shown only to the user and admins, never looked up on Discord or X.
+  displayName   String?
+  discordHandle String?
+  xHandle       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  wallets        Wallet[]
+  signInWallets  SignInWallet[]
+  accessCodeUsed AccessCode?    @relation("AccessCodeRedeemedBy")
+
+  @@map("users")
+}
+
+enum SignInWalletKind {
+  EOA
+  CONTRACT
+}
+
+/// ADR-003 §4.4: a wallet that can sign an account in. A credential, never a bot wallet: a bot
+/// wallet's key can never sign anyone in. `address` is EIP-55; uniqueness is on `addressLower`
+/// (one account per wallet, globally). Only EOA at launch (§4.3); `kind` and `chainId` are there
+/// so contract wallets can be added without a migration of existing rows.
+model SignInWallet {
+  id           String           @id @default(uuid())
+  userId       String
+  user         User             @relation(fields: [userId], references: [id])
+  address      String
+  addressLower String           @unique
+  kind         SignInWalletKind @default(EOA)
+  chainId      Int?
+  addedAt      DateTime         @default(now())
+  lastUsedAt   DateTime?
+
+  @@index([userId])
+  @@map("sign_in_wallets")
+}
+
+/// Invite codes. One per person, single use. Only an HMAC of
+/// the code is stored (ACCESS_CODE_SECRET); the code itself is shown once, when it is created.
+/// Redeemed atomically when the account is created by wallet sign-in.
+model AccessCode {
+  id                String    @id @default(uuid())
+  codeHash          String    @unique
+  /// Who it is for, for the admin's own reference ("from the waitlist: @name").
+  label             String?
+  createdById       String
+  /// Optional: only this wallet may use the code.
+  boundAddressLower String?
+  expiresAt         DateTime?
+  revokedAt         DateTime?
+  redeemedAt        DateTime?
+  redeemedById      String?   @unique
+  redeemedBy        User?     @relation("AccessCodeRedeemedBy", fields: [redeemedById], references: [id])
+  createdAt         DateTime  @default(now())
+
+  @@index([createdAt])
+  @@map("access_codes")
+}
+
+enum WaitlistStatus {
+  WAITING
+  INVITED
+}
+
+/// People who left an email on the landing page. Private: the read-only analytics role has no grant on
+/// this table, and the app can change only the status, note and invite date of a row.
+model WaitlistEntry {
+  id         String         @id @default(uuid())
+  /// As typed (trimmed).
+  email      String
+  /// Lowercased: one row per person, however they capitalise it.
+  emailLower String         @unique
+  status     WaitlistStatus @default(WAITING)
+  /// The admin's own note.
+  note       String?
+  invitedAt  DateTime?
+  createdAt  DateTime       @default(now())
+
+  @@index([status, createdAt])
+  @@map("waitlist_entries")
+}
+
+/// The record that an account accepted a version of the Terms of Use and Privacy Policy. Append-only:
+/// the app role can add rows and read them, never change or delete one. Kept as evidence of what was
+/// agreed and when, so it holds a plain userId (no foreign key) and survives anything done to the account.
+model TermsAcceptance {
+  id             String   @id @default(uuid())
+  userId         String
+  termsVersion   String
+  privacyVersion String
+  /// "sign_up" (ticked while creating the account) or "re_accept" (accepted a later version).
+  source         String
+  /// HMAC of the IP address, so it can be matched to a known IP later but not read back.
+  ipHash         String?
+  userAgent      String?
+  acceptedAt     DateTime @default(now())
+
+  @@index([userId, acceptedAt])
+  @@map("terms_acceptances")
+}
+
+model Wallet {
+  id      String @id @default(uuid())
+  address String @unique
+
+  label  String?
+  tier   WalletTier   @default(HOT)
+  status WalletStatus @default(ACTIVE)
+
+  /// Deliberately NO @default: every insert path must say which it is. A
+  /// default would let a future code path that forgets to set it silently
+  /// label an imported wallet GENERATED: the exact mislabelling this field
+  /// exists to prevent. (The migration adds the column with a temporary
+  /// default only to backfill existing rows, then drops it.)
+  origin WalletOrigin
+
+  /// ADR-002 §3.2/§3.3: required, never nullable. The sole owner. Every
+  /// repository method that reads or writes a specific wallet must be scoped
+  /// by this (see WalletRepository): that threading is a separate follow-up
+  /// from the schema change itself; see ADR-002 §8.
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  encryptedPrivateKey String
+  wrappedDek          String
+  iv                  String
+  authTag             String
+  keyVersion          Int    @default(1)
+  kmsKeyId            String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rotationEvents WalletKeyRotationEvent[]
+
+  @@index([tier, status])
+  @@index([userId, status])
+  @@map("wallets")
+}
+
+/// One row per tokenId a mint produced, learned by parsing the mint's own confirmed receipt
+/// (never guessed ahead of time: SeaDrop assigns tokenIds sequentially on-chain, invisible to
+/// the caller before the receipt exists). The source of truth for "which tokenId did THIS
+/// mint produce" (vault auto-drain reads this, never re-derives it), and the fallback source
+/// for "what does this wallet hold" when a live NFT indexer isn't available for the chain.
+/// No relation to Wallet on purpose, same reasoning as AuditLog: a ledger row should read back
+/// correctly even if the wallet row it refers to is later deleted.
+model MintedNft {
+  id       String @id @default(uuid())
+  walletId String
+  /// Plain scalar, not a relation, same reasoning as the rest of this model: lets
+  /// vault-settings lookups filter by owner without joining through Wallet. Backfilled
+  /// from wallets.userId for pre-existing rows (see the migration that adds it).
+  ownerId  String
+  chainId  Int
+  contract String
+
+  /// Decimal string: a tokenId routinely exceeds JS's safe-integer range.
+  tokenId String
+  /// "erc721" | "erc1155".
+  standard String
+  /// "1" for a 721; a 1155's real minted quantity for this tokenId otherwise.
+  amount String @default("1")
+
+  mintedAt DateTime @default(now())
+  /// Null while Stryx still holds this token. Set the moment a transfer (manual or vault
+  /// auto-drain) for it succeeds, so a later holdings read excludes it without deleting the
+  /// row: the mint itself is still real, durable history.
+  transferredAt DateTime?
+  transferredTo String?
+
+  /// Set only when vault auto-drain was configured and its attempt for this token failed.
+  /// A successful auto-drain is indistinguishable from a manual transfer (both set
+  /// transferredAt/To above): this column exists only to surface the failure case.
+  drainError    String?
+  drainFailedAt DateTime?
+
+  @@index([walletId, chainId, contract])
+  @@index([ownerId, chainId, contract])
+  @@map("minted_nfts")
+}
+
+/// One vault address per owner per chain. Changing it requires a step-up grant.
+model VaultSetting {
+  id      String @id @default(uuid())
+  ownerId String
+  chainId Int
+
+  enabled      Boolean @default(false)
+  vaultAddress String?
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([ownerId, chainId])
+  @@map("vault_settings")
+}
+
+model WalletKeyRotationEvent {
+  id       String @id @default(uuid())
+  walletId String
+  /// Removed with its wallet: deleting a wallet takes its rotation history with it (the audit log
+  /// keeps the record that it was rotated and deleted).
+  wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  fromVersion Int
+  toVersion   Int
+  kmsKeyId    String
+  rotatedAt   DateTime @default(now())
+  reason      String?
+
+  @@index([walletId])
+  @@map("wallet_key_rotation_events")
+}
+
+enum AuditActorType {
+  USER
+  ADMIN
+  SYSTEM
+}
+
+enum AuditOutcome {
+  SUCCESS
+  FAILURE
+}
+
+/// ADR-002 §3.10: every wallet-affecting action, recorded in a form that
+/// survives the actor trying to hide it. That property is enforced at the
+/// Postgres level (see the migration that adds this table): the role the
+/// API connects as has INSERT but not UPDATE or DELETE on this table,
+/// independent of and unforgeable by the application code that writes to
+/// it: same principle as ADR-001 §3.3's KMS logs being independent of the
+/// app. No relations to User/Wallet on purpose: an audit row must remain
+/// exactly as written even after the wallet or user it references is
+/// deleted, so this deliberately does NOT cascade or get constrained by
+/// their lifecycle.
+model AuditLog {
+  id           String         @id @default(uuid())
+  /// Null only for a true platform-wide system action with no single actor
+  /// (e.g. an automated anomaly-triggered global stop): every action tied
+  /// to a specific user or wallet always carries this.
+  actorUserId  String?
+  actorType    AuditActorType
+  /// e.g. "wallet.create", "wallet.rotate_key", "mint.public", "session.login".
+  action       String
+  walletId     String?
+  /// Populated when the affected resource's owner differs from the actor
+  /// (e.g. a future admin "act as" path): usually equal to actorUserId.
+  targetUserId String?
+  outcome      AuditOutcome
+  detail       String?
+  createdAt    DateTime       @default(now())
+
+  @@index([actorUserId, createdAt])
+  @@index([walletId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_log")
+}
+
+/// One scheduled signed-mint job's run: the job-level facts the
+/// per-wallet rows below share, and what warm-up found. Written by the runner as it goes, so a
+/// half-finished run still reads back as far as it got. The app role may INSERT/UPDATE but
+/// not DELETE (see the migration): this is the record of what happened.
+model SignedMintRun {
+  /// The BullMQ job id.
+  jobId      String   @id
+  ownerId    String
+  chainId    Int
+  contract   String
+  slug       String
+  stageUuid  String
+  stageLabel String
+  /// T-0: the stage start every timing below is measured from.
+  t0         DateTime
+  dryRun     Boolean
+  simulate   Boolean
+  rehearsal  Boolean  @default(false)
+  /// "scheduled" | "warming_up" | "fetching" | "finished" | "aborted" | "disabled" | "moved"
+  status     String
+  clockSkewed  Boolean?
+  clockSummary String?
+  /// Plain-text notes from warm-up and the run (skipped wallets, fee preset, give-up).
+  notes      String?
+  warmupAt   DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([ownerId, createdAt])
+  @@map("signed_mint_runs")
+}
+
+/// One wallet in one signed-mint run: its outcome and its timing, every timing in ms from
+/// the run's T-0 (negative = before the stage opened). Nullable timings mean "never got that
+/// far".
+model SignedMintAttempt {
+  id            String  @id @default(uuid())
+  jobId         String
+  ownerId       String
+  walletId      String
+  walletAddress String
+  quantity      Int
+  /// "pending" | "skipped" | "failed" | "dry_run_ok" | "broadcast" | "confirmed" | "reverted"
+  status        String
+  /// A short code (not_eligible, gave_up, simulation_reverted, ...). Null on success.
+  reason        String?
+  detail        String?
+  txHash        String?
+  nonce         Int?
+  blockNumber   String?
+  gasUsed       String?
+  effectiveGasPriceWei String?
+  valueWei      String?
+
+  calldataMs    Int?
+  simulatedMs   Int?
+  /// How long the eth_call itself took, separately from when it finished.
+  simulateDurationMs Int?
+  signedMs      Int?
+  broadcastMs   Int?
+  confirmedMs   Int?
+  /// OpenSea "not active" answers before calldata arrived, and 429s seen.
+  notActiveCount   Int @default(0)
+  rateLimitedCount Int @default(0)
+  errorCount       Int @default(0)
+  /// Every request made to OpenSea's mint endpoint for this wallet, whatever the answer.
+  requestCount     Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([jobId, walletId])
+  @@index([ownerId, createdAt])
+  @@map("signed_mint_attempts")
+}
+
+/// The mint event log (ADR-003 §4.9): one row per wallet per mint attempt, the server's record of
+/// what happened. Written at the one choke point every mint goes through (MintExecutionService,
+/// and the signed-mint runner), BEFORE signing, then moved along its lifecycle. The app role can
+/// insert and read, update only the outcome columns, and never delete (see the migration); a
+/// trigger refuses illegal status changes.
+enum MintEventStatus {
+  SENDING   /// recorded, about to sign
+  PENDING   /// signed (hash known) and sent, not yet settled
+  CONFIRMED
+  REVERTED  /// mined, failed on chain
+  DROPPED   /// never mined after the settle window
+  BLOCKED   /// never sent: a check before signing refused it
+}
+
+enum MintEventSource {
+  MANUAL    /// a signed-in dashboard session asked
+  SCHEDULED /// fired by the scheduler
+  API       /// a bearer credential asked (today the operator token)
+}
+
+enum MintEventKind {
+  PUBLIC
+  ALLOWLIST
+  SIGNED
+}
+
+model MintEvent {
+  id                   String          @id @default(uuid())
+  ownerId              String
+  walletId             String
+  walletAddress        String
+  chainId              Int
+  contractAddress      String
+  kind                 MintEventKind
+  quantity             Int
+  source               MintEventSource
+  /// The scheduled or signed-mint job this belongs to, when there is one (groups a run).
+  jobId                String?
+  status               MintEventStatus
+  /// A short reason code (MintFailureReason), never raw error text.
+  failureReason        String?
+  /// At most 200 characters, URLs removed: e.g. a decoded revert name. Never a raw RPC error.
+  failureNote          String?
+  txHash               String?
+  nonce                Int?
+  blockNumber          BigInt?
+  gasUsed              Decimal?        @db.Decimal(78, 0)
+  effectiveGasPriceWei Decimal?        @db.Decimal(78, 0)
+  feeWei               Decimal?        @db.Decimal(78, 0)
+  /// The mint price sent with the transaction.
+  valueWei             Decimal?        @db.Decimal(78, 0)
+  createdAt            DateTime        @default(now())
+  broadcastAt          DateTime?
+  settledAt            DateTime?
+
+  @@index([ownerId, createdAt])
+  @@index([status, chainId])
+  @@index([chainId, txHash])
+  @@map("mint_events")
+}

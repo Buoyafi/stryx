@@ -1,0 +1,20 @@
+{
+  "name": "@stryx/config",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Zod-validated environment/config loading, shared across services.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": { "zod": "^4.4.3" },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.6.0",
+    "vitest": "^4.1.11"
+  }
+}
